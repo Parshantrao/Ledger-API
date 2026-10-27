@@ -1,0 +1,23 @@
+# Single-node MongoDB replica set for local development.
+# Multi-document transactions require a replica set; a standalone mongod rejects them.
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: account-ledger-mongo
+    command: ['--replSet', 'rs0', '--bind_ip_all', '--port', '27017']
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+      - ./scripts/mongo-init-replica.js:/scripts/mongo-init-replica.js:ro
+    # The healthcheck initiates the replica set on first start (idempotent) and
+    # reports healthy only once this node is PRIMARY and accepting transactions.
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--port', '27017', '/scripts/mongo-init-replica.js']
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  mongo-data:
